@@ -2,104 +2,104 @@
   block:
     
   # copy
-- when: unattended_upgrades_systemd_copy | length > 0
+  - when: unattended_upgrades_systemd_copy | length > 0
     name: Copy systemd unit files {{ unattended_upgrades_systemd_copy }}
-  become: true
-  notify: systemctl --system daemon-reload
-  loop: "{{ unattended_upgrades_systemd_copy }}"
-  ansible.builtin.copy:
-      src: "{{ role_path }}/files/{{ item }}"
-      dest: "/etc/systemd/system/{{ item.split('/')[-1] }}" # systemd/un.machines.service -> un.machines.service
-    owner: root
-    group: root
-    mode: u=rw,g=r,o=r
-
-  # template
-- when: unattended_upgrades_systemd_template | length > 0
-  name: Template systemd system unit files {{ unattended_upgrades_systemd_template }}
-  become: true
-  notify: systemctl --system daemon-reload
-  loop: "{{ unattended_upgrades_systemd_template }}"
-  ansible.builtin.template:
-      src: "{{ role_path }}/templates/{{ item }}"
-    dest: "/etc/systemd/system/{{ item.split('/')[-1].replace('.j2', '') }}" # systemd/un.machines.service.j2 -> un.machines.service.j2 -> systemd/un.machines.service
-    owner: root
-    group: root
-    mode: u=rw,g=r,o=r
-
-# reset
-- when: unattended_upgrades_systemd_reset | length > 0
-    name: Reset systemd system unit overrides {{ unattended_upgrades_systemd_reset }}
-  loop: "{{ unattended_upgrades_systemd_reset }}"
-  become: true
-  ansible.builtin.file:
-    path: "/etc/systemd/system/{{ item }}.d"
-    state: absent
-
-# overrides
-- when: unattended_upgrades_systemd_overrides | length > 0
-  block:
-
-  # mkdir overrides
-  - name: Mkdir in /etc/systemd/system/...
-    become: true
-    loop: "{{ unattended_upgrades_systemd_overrides }}"
-    ansible.builtin.file:
-      path: "/etc/systemd/system/{{ item | dirname }}"
-      state: directory
-      owner: root
-      group: root
-      mode: o=rwx,g=rx,o=rx
-
-  # cp overrides
-    - name: Copy systemd system unit overrides {{ unattended_upgrades_systemd_overrides }}
     become: true
     notify: systemctl --system daemon-reload
-    loop: "{{ unattended_upgrades_systemd_overrides }}"
+    loop: "{{ unattended_upgrades_systemd_copy }}"
     ansible.builtin.copy:
-        src: "{{ role_path }}/files/{{ item }}"
-      dest: "/etc/systemd/system/{{ item }}"
-      force: true
+      src: "{{ role_path }}/files/{{ item }}"
+      dest: "/etc/systemd/system/{{ item.split('/')[-1] }}" # systemd/un.machines.service -> un.machines.service
       owner: root
       group: root
       mode: u=rw,g=r,o=r
 
-# enable
-- when: unattended_upgrades_systemd_enable | length > 0
+    # template
+  - when: unattended_upgrades_systemd_template | length > 0
+    name: Template systemd system unit files {{ unattended_upgrades_systemd_template }}
+    become: true
+    notify: systemctl --system daemon-reload
+    loop: "{{ unattended_upgrades_systemd_template }}"
+    ansible.builtin.template:
+      src: "{{ role_path }}/templates/{{ item }}"
+      dest: "/etc/systemd/system/{{ item.split('/')[-1].replace('.j2', '') }}" # systemd/un.machines.service.j2 -> un.machines.service.j2 -> systemd/un.machines.service
+      owner: root
+      group: root
+      mode: u=rw,g=r,o=r
+
+  # reset
+  - when: unattended_upgrades_systemd_reset | length > 0
+    name: Reset systemd system unit overrides {{ unattended_upgrades_systemd_reset }}
+    loop: "{{ unattended_upgrades_systemd_reset }}"
+    become: true
+    ansible.builtin.file:
+      path: "/etc/systemd/system/{{ item }}.d"
+      state: absent
+
+  # overrides
+  - when: unattended_upgrades_systemd_overrides | length > 0
+    block:
+
+    # mkdir overrides
+    - name: Mkdir in /etc/systemd/system/...
+      become: true
+      loop: "{{ unattended_upgrades_systemd_overrides }}"
+      ansible.builtin.file:
+        path: "/etc/systemd/system/{{ item | dirname }}"
+        state: directory
+        owner: root
+        group: root
+        mode: o=rwx,g=rx,o=rx
+
+    # cp overrides
+    - name: Copy systemd system unit overrides {{ unattended_upgrades_systemd_overrides }}
+      become: true
+      notify: systemctl --system daemon-reload
+      loop: "{{ unattended_upgrades_systemd_overrides }}"
+      ansible.builtin.copy:
+        src: "{{ role_path }}/files/{{ item }}"
+        dest: "/etc/systemd/system/{{ item }}"
+        force: true
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r
+
+  # enable
+  - when: unattended_upgrades_systemd_enable | length > 0
     name: systemctl --system enable {{ unattended_upgrades_systemd_enable }}
-  become: true
-  loop: "{{ unattended_upgrades_systemd_enable }}"
-  ansible.builtin.systemd_service:
-    scope: system
-    name: "{{ item }}"
-    enabled: true
+    become: true
+    loop: "{{ unattended_upgrades_systemd_enable }}"
+    ansible.builtin.systemd_service:
+      scope: system
+      name: "{{ item }}"
+      enabled: true
 
-# disable
-- when: unattended_upgrades_systemd_disable | length > 0
+  # disable
+  - when: unattended_upgrades_systemd_disable | length > 0
     name: systemctl --system disable {{ unattended_upgrades_systemd_disable }}
-  become: true
-  loop: "{{ unattended_upgrades_systemd_disable }}"
-  ansible.builtin.systemd_service:
-    scope: system
-    name: "{{ item }}"
-    enabled: false
+    become: true
+    loop: "{{ unattended_upgrades_systemd_disable }}"
+    ansible.builtin.systemd_service:
+      scope: system
+      name: "{{ item }}"
+      enabled: false
 
-# start
-- when: unattended_upgrades_systemd_start | length > 0
+  # start
+  - when: unattended_upgrades_systemd_start | length > 0
     name: systemctl --system start {{ unattended_upgrades_systemd_start }}
-  become: true
-  loop: "{{ unattended_upgrades_systemd_start }}"
-  ansible.builtin.systemd_service:
-    scope: system
-    name: "{{ item }}"
-    state: started
+    become: true
+    loop: "{{ unattended_upgrades_systemd_start }}"
+    ansible.builtin.systemd_service:
+      scope: system
+      name: "{{ item }}"
+      state: started
 
-# stop
-- when: unattended_upgrades_systemd_stop | length > 0
+  # stop
+  - when: unattended_upgrades_systemd_stop | length > 0
     name: systemctl --system stop {{ unattended_upgrades_systemd_stop }}
-  become: true
-  loop: "{{ unattended_upgrades_systemd_stop }}"
-  ansible.builtin.systemd_service:
-    scope: system
-    name: "{{ item }}"
-    state: stopped
+    become: true
+    loop: "{{ unattended_upgrades_systemd_stop }}"
+    ansible.builtin.systemd_service:
+      scope: system
+      name: "{{ item }}"
+      state: stopped
