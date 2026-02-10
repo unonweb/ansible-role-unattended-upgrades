@@ -8,6 +8,7 @@ unattended_upgrades_apt_install:
 - needrestart
 - powermgmt-base
 unattended_upgrades_apt_remove: []
+unattended_upgrades_systemd_scope: system
 unattended_upgrades_systemd_copy: []
 unattended_upgrades_systemd_template: []
 unattended_upgrades_systemd_reset: []
